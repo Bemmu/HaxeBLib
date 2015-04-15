@@ -1,4 +1,4 @@
 -swf game.swf
 -main Game
--swf-header 960:600:60:FF0000
+-swf-header 960:600:120:FF0000
 -swf-version 11
