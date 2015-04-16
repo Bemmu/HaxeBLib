@@ -61,10 +61,30 @@ class Game {
 		}
 	}
 
+	var frame = 0;
+
 	function refresh(e:flash.events.Event) {
+
+		frame += 1;
+		var xoff = Std.int(Math.sin(frame * 0.001) * 50 + 50);
+		var yoff = Std.int(Math.cos(frame * 0.0025) * 50 + 50);
+		var xoff2 = Std.int(Math.sin(frame * 0.012 + 0.5) * 50 + 50);
+		var yoff2 = Std.int(Math.cos(frame * 0.035 + 0.25) * 50 + 50);
 
 		buffer.fillRect(buffer.rect, 0xff000000);
 		buffer.draw(logo);
+		var m = new Matrix();
+		m.scale(3, 3);
+
+		var t = flash.Lib.getTimer();
+
+		Ray.all(xoff, yoff, xoff2, yoff2, function (x, y) {
+			buffer.setPixel(x, y, 0xffffffff);
+		});
+
+		var elapsed = flash.Lib.getTimer() - t;
+//		trace(elapsed);
+
 
 		frames++;
 		if (Date.now().getTime() - fpsCountStart > 1000) {
