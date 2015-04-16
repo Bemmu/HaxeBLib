@@ -9,6 +9,7 @@ import b.*;
 
 @:bitmap("brush.png") class Sheet extends flash.display.BitmapData {}
 @:bitmap("logo.png") class Logo extends flash.display.BitmapData {}
+@:bitmap("particle.png") class ParticlePNG extends flash.display.BitmapData {}
 
 class Game {
 	var buffer:BitmapData = new BitmapData(320, 200, false, 0xff00ff00);
@@ -21,7 +22,7 @@ class Game {
 	var fpsCountStart = 0.0;
 	var blob:Blob = null;
 	var dx = 1;
-	var particles = new Particles();
+	var particles:Particles = null;
 
 	function overlay(a:Float, b:Float) {
 		if (a < 0.5) {
@@ -68,7 +69,7 @@ class Game {
 		frames++;
 		if (Date.now().getTime() - fpsCountStart > 1000) {
 			if (fpsCountStart > 0) {
-//				trace(frames + " fps");
+				trace(frames + " fps");
 			}
 			frames = 0;
 			fpsCountStart = Date.now().getTime();
@@ -77,8 +78,8 @@ class Game {
 		blob.draw(buffer);
 		blob.tick();
 
-		if (Math.random() < 0.3) {
-			particles.burst(100, 100, 0, 100, 1, 1, 100);
+		if (/*Math.random() < 0.03 &&*/ blob.ticks == 0 && (blob.currentFrameInAnimation%3) == 0) {
+			particles.burst(blob.x + 50, blob.y + 150, 0, 100, 1, 1, 10);
 		}
 
 		blob.x += dx;
@@ -97,11 +98,11 @@ class Game {
 		particles.tick();
 		particleBD.fillRect(particleBD.rect, 0x00000000);
 		particles.draw(particleBD);
-		particleBD.applyFilter(particleBD, particleBD.rect, new Point(0,0), new flash.filters.GlowFilter(0xffffffff, 1.0, 2, 2, 1.5, 2, false, true));
-		buffer.draw(particleBD);
+		particleBD.applyFilter(particleBD, particleBD.rect, new Point(0,0), new flash.filters.GlowFilter(0xffffffff, 1.0, 10, 10, 1.5, 2, false, false));
+		buffer.draw(particleBD, null, null, flash.display.BlendMode.INVERT);
 
 		var elapsed = flash.Lib.getTimer() - t;
-		trace(elapsed);
+//		trace(elapsed);
 
 		display.fillRect(buffer.rect, 0xffffffff);
 
@@ -109,55 +110,6 @@ class Game {
 		m.scale(3, 3);
 		display.draw(buffer, m, null, null);
 		display.draw(overlayBD, null, null, OVERLAY);
-
-
-		return;
-
-		// Dead code, this turned out to be slower
-
-		var t = flash.Lib.getTimer();
-
-		var rect = buffer.rect;
-		var size:Int = buffer.width * buffer.height * 4;
-		var pixels = buffer.getPixels(buffer.rect);
-		flash.Memory.select(pixels);
-
-		// Double width
-		var i:Int = size - buffer.width * 4;
-		var halfW = buffer.width / 2;
-
-		var j:Int;
-
-		i = size;
-		j = size >> 1;
-		while (i > 0) {
-			j -= 4 * buffer.width;
-			i -= 8 * buffer.width;
-
-			var xb = buffer.width * 4;
-			var xs = buffer.width * 2;
-			var pixel:UInt;
-			while (xb > 0) {
-				xb -= 8;
-				xs -= 4;
-				pixel = flash.Memory.getI32(j + xs);
-
-				flash.Memory.setI32(i + xb, pixel);
-				flash.Memory.setI32(i + xb + 4, pixel);
-
-				var brighterPixel = brighten(pixel);
-
-				flash.Memory.setI32(i + xb + buffer.width * 4, brighterPixel);
-				flash.Memory.setI32(i + xb + buffer.width * 4 + 4, brighterPixel);
-			}
-		}
-
-
-		var elapsed = flash.Lib.getTimer() - t;
-		trace(elapsed);
-
-		pixels.position = 0;
-		buffer.setPixels(rect, pixels);
 	}
 
 	var channel:SoundChannel;
@@ -182,6 +134,9 @@ class Game {
 		s.addEventListener( flash.events.Event.CONTEXT3D_CREATE, onReady );
 		s.requestContext3D();
 		return;*/
+
+		particles = new Particles();
+		particles.setBitmap("pixel", new ParticlePNG(0,0));
 
 		Blob.setSheet(new Sheet(0, 0));
 		Blob.setGrid(104, 150);
