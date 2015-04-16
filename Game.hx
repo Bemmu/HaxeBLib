@@ -8,16 +8,20 @@ import flash.media.*;
 import b.*;
 
 @:bitmap("brush.png") class Sheet extends flash.display.BitmapData {}
+@:bitmap("logo.png") class Logo extends flash.display.BitmapData {}
 
 class Game {
 	var buffer:BitmapData = new BitmapData(320, 200, false, 0xff00ff00);
+	var particleBD:BitmapData = new BitmapData(320, 200, true, 0x00000000);
 	var display:BitmapData = new BitmapData(960, 600, false, 0xff00ff00);
 	var overlayBD:BitmapData = new BitmapData(960, 600, false, 0xff00ff00);
+	var logo = new Logo(0,0);
 
 	var frames = 0;
 	var fpsCountStart = 0.0;
 	var blob:Blob = null;
 	var dx = 1;
+	var particles = new Particles();
 
 	function overlay(a:Float, b:Float) {
 		if (a < 0.5) {
@@ -59,6 +63,7 @@ class Game {
 	function refresh(e:flash.events.Event) {
 
 		buffer.fillRect(buffer.rect, 0xff000000);
+		buffer.draw(logo);
 
 		frames++;
 		if (Date.now().getTime() - fpsCountStart > 1000) {
@@ -69,8 +74,13 @@ class Game {
 			fpsCountStart = Date.now().getTime();
 		}
 
-		blob.draw(buffer);
+//		blob.draw(buffer);
 		blob.tick();
+
+		if (Math.random() < 0.3) {
+			particles.burst(100, 100, 0, 100, 1, 1, 100);
+		}
+
 		blob.x += dx;
 		if (blob.x > 100) {
 			dx *= -1;
@@ -84,6 +94,15 @@ class Game {
 		}
 
 		var t = flash.Lib.getTimer();
+		particles.tick();
+		particleBD.fillRect(particleBD.rect, 0x00000000);
+		particles.draw(particleBD);
+		particleBD.applyFilter(particleBD, particleBD.rect, new Point(0,0), new flash.filters.GlowFilter(0xffffffff, 1.0, 2, 2, 1.5, 2, false, true));
+		buffer.draw(particleBD);
+
+		var elapsed = flash.Lib.getTimer() - t;
+		trace(elapsed);
+
 		display.fillRect(buffer.rect, 0xffffffff);
 
 		var m = new Matrix();
@@ -91,8 +110,6 @@ class Game {
 		display.draw(buffer, m, null, null);
 		display.draw(overlayBD, null, null, OVERLAY);
 
-		var elapsed = flash.Lib.getTimer() - t;
-		trace(elapsed);
 
 		return;
 
