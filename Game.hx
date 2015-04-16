@@ -10,7 +10,10 @@ import b.*;
 @:bitmap("brush.png") class Sheet extends flash.display.BitmapData {}
 
 class Game {
-	var buffer:BitmapData = new BitmapData(960, 600, false, 0xff00ff00);
+	var buffer:BitmapData = new BitmapData(320, 200, false, 0xff00ff00);
+	var display:BitmapData = new BitmapData(960, 600, false, 0xff00ff00);
+	var overlayBD:BitmapData = new BitmapData(960, 600, false, 0xff00ff00);
+
 	var frames = 0;
 	var fpsCountStart = 0.0;
 	var blob:Blob = null;
@@ -41,64 +44,64 @@ class Game {
 		return n;
 	}
 
+	function generateOverlay(buffer, bgColor = 0xff808080, fgColor = 0xffffffff) {
+		for (x in 0...buffer.width) {
+			for (y in 0...buffer.height) {
+				if ((y%3) == 2) {
+					buffer.setPixel32(x, y, fgColor);
+				} else {
+					buffer.setPixel32(x, y, bgColor);
+				}
+			}
+		}
+	}
+
 	function refresh(e:flash.events.Event) {
 
-		buffer.fillRect(new Rectangle(0, 0, 960, 600), 0xffff0000);
+		buffer.fillRect(buffer.rect, 0xff000000);
 
 		frames++;
 		if (Date.now().getTime() - fpsCountStart > 1000) {
 			if (fpsCountStart > 0) {
-				trace(frames + " fps");
+//				trace(frames + " fps");
 			}
 			frames = 0;
 			fpsCountStart = Date.now().getTime();
 		}
-		buffer.fillRect(new Rectangle(0, 0, 960, 600), 0xffff0000);
 
 		blob.draw(buffer);
 		blob.tick();
 		blob.x += dx;
-		if (blob.x > 200) {
-			dx *= -1;
-			blob.x = 200;
-			blob.anim("walk_left");
-		}
-		if (blob.x < 100) {
+		if (blob.x > 100) {
 			dx *= -1;
 			blob.x = 100;
+			blob.anim("walk_left");
+		}
+		if (blob.x < 0) {
+			dx *= -1;
+			blob.x = 0;
 			blob.anim("walk_right");
 		}
 
-/*		var mem = buffer.getPixels(new Rectangle(0, 0, buffer.width, buffer.height));
-		flash.Memory.select(mem);
-		var end = mem.position;
-		trace("fff");
-		var i:UInt = 0;
-		end = 10000;
-		while (i < end) {
-			i += 4;
-			flash.Memory.setI32(i, 0xffffffff);			
-		}
-		mem.position = end;
-*/
-//		var bytes:ByteArray = buffer.getPixels(new Rectangle(0,0,10,10));
-//		trace("argh");
-/*
-		try {
-			bytes[10] = 0xffff0000;
-			buffer.setPixels(new Rectangle(0,0,10,10), bytes);
-		} catch (foo : String) {
-			var y = 10;
-			trace("arghb");
-		}
-		trace("argha");*/
+		var t = flash.Lib.getTimer();
+		display.fillRect(buffer.rect, 0xffffffff);
 
-		buffer.setPixel32(100, 100, 0xffffffff);
+		var m = new Matrix();
+		m.scale(3, 3);
+		display.draw(buffer, m, null, null);
+		display.draw(overlayBD, null, null, OVERLAY);
+
+		var elapsed = flash.Lib.getTimer() - t;
+		trace(elapsed);
+
+		return;
+
+		// Dead code, this turned out to be slower
+
+		var t = flash.Lib.getTimer();
 
 		var rect = buffer.rect;
 		var size:Int = buffer.width * buffer.height * 4;
-//		var pixels:ByteArray = new ByteArray();
-//		pixels.length = size;
 		var pixels = buffer.getPixels(buffer.rect);
 		flash.Memory.select(pixels);
 
@@ -130,76 +133,51 @@ class Game {
 				flash.Memory.setI32(i + xb + buffer.width * 4, brighterPixel);
 				flash.Memory.setI32(i + xb + buffer.width * 4 + 4, brighterPixel);
 			}
-
-
-//			flash.Memory.setI32(j, 0xffff00ff);
 		}
 
-/*		while (i < size) {
-			flash.Memory.setI32(i, 0xffff00ff);
-			i += 4;
-		}
-*/
 
-/*		var smallXPos:Int;
-		var bigXPos:Int;
-		var pixel:UInt;
-//		trace("make it so");
-
-		var bigYPos:Int = size - buffer.width * 4;
-		var smallYPos:Int = buffer.width * buffer.height * 4 - buffer.width * 4;
-
-		while (bigYPos > 0) {
-
-			bigXPos = bigYPos + buffer.width * 4;
-			smallXPos = smallYPos + (buffer.width >> 1) * 4;
-
-			while (bigXPos > smallXPos) {
-//				flash.Memory.setI32(i + x*4, 0xffff00ff);
-				pixel = flash.Memory.getI32(smallXPos);
-				smallXPos -= 4;
-//				pixel = 0xffff00ff;
-	
-				if (bigXPos >= size) {
-					break;
-				}
-
-//				flash.Memory.setI32(bigXPos, pixel);
-				bigXPos -= 4;
-//				flash.Memory.setI32(bigXPos, pixel);
-				bigXPos -= 4;
-
-				flash.Memory.setI32(smallXPos, 0xffff00ff);
-
-			}
-
-			smallYPos -= buffer.width * 8;
-			bigYPos -= buffer.width * 8;
-		}
-		trace("ruu");
-*/
-//		flash.Memory.setI32((100 * buffer.width + 100) * 4, 0xffffffff);
+		var elapsed = flash.Lib.getTimer() - t;
+		trace(elapsed);
 
 		pixels.position = 0;
 		buffer.setPixels(rect, pixels);
-
-//		buffer.setPixel32(100, 100, 0xffffffff);
-
-		return;
 	}
 
 	var channel:SoundChannel;
 
+	var c : flash.display3D.Context3D;
+	var shader : Shader;
+//	var pol : Polygon;
+	var camera : Camera;
+	var s : flash.display.Stage3D;
+	var stage = flash.Lib.current.stage;
+
+	function onReady(foo:Dynamic) {
+		c = s.context3D;
+		c.enableErrorChecking = true;
+		c.configureBackBuffer(stage.stageWidth, stage.stageHeight, 0, true);
+		shader = new Shader();
+		camera = new Camera();
+	}
+
 	public function new() {
+/*		s = stage.stage3Ds[0];
+		s.addEventListener( flash.events.Event.CONTEXT3D_CREATE, onReady );
+		s.requestContext3D();
+		return;*/
+
 		Blob.setSheet(new Sheet(0, 0));
 		Blob.setGrid(104, 150);
 		Blob.defineAnimation("walk_right", 0, 0, 6, 15);
 		Blob.defineAnimation("walk_left", 0, 1, 6, 15);
 
+		generateOverlay(overlayBD, 0xff808080);
+
 		blob = new Blob();
+		blob.y = 30;
 		blob.anim("walk_right");
 
-		flash.Lib.current.addChild(new Bitmap(buffer));
+		flash.Lib.current.addChild(new Bitmap(display));
 		flash.Lib.current.stage.addEventListener(Event.ENTER_FRAME, refresh);
 	}
 

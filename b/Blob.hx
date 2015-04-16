@@ -34,7 +34,6 @@ class Blob {
 	}
 
 	public function anim(name:String) {
-		trace(name);
 		currentAnimation = defs[name];
 		currentFrameInAnimation = 0;
 		ticks = 0;
