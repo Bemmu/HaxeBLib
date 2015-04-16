@@ -74,7 +74,7 @@ class Game {
 			fpsCountStart = Date.now().getTime();
 		}
 
-//		blob.draw(buffer);
+		blob.draw(buffer);
 		blob.tick();
 
 		if (Math.random() < 0.3) {
